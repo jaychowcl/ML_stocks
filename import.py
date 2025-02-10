@@ -17,12 +17,19 @@ class FinanceData:
         self.yfRawData = yf.Tickers(self.tickers)
     
     def downloadData(self): #download market data for tickers
-        self.yfRawData = yf.download(self.tickers, period = self.timePeriod)
-
-    def sep(self):
+        self.yfRawDataDl = yf.download(self.tickers, period = self.timePeriod)
         #separate raw data into each ticker
-        for ticker in self.tickers:
-            print(ticker)
+        self.tickerDf = {} #init tickerdf dict
+
+        for ticker in self.tickers:#parse raw data and make ticker:marketDataFrame dictionar
+            # print(ticker)
+            tickerdf_i = self.yfRawDataDl.xs(key=ticker, level='Ticker', axis=1)
+            # print(tickerdf_i)
+            self.tickerDf[ticker] = tickerdf_i
+
+        # print(self.tickerDf)
+    
+    def generateMetrics(self): #
 
 
 ###################################
@@ -50,9 +57,6 @@ data.yfRawData.tickers["SPY"].info
 
 #download market data
 data.downloadData()
-data.yfRawData
 
-#separate data into tickerdata dataframe
-data.sep()
 
 ###################################
