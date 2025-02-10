@@ -1,0 +1,20 @@
+ML_stocks
+
+A data analysis pipeline for stock analysis.
+
+Overview:
+1. import.py
+
+	A data fetching and data preprocessing script for:
+	a. Stock price data from:
+		ai. Yahoo finance
+
+
+2. metrics.py
+
+	A script for generating relevent metrics for a given stock including:
+	a. MACD
+	b. SMA
+	c. EMA
+	d. ADX
+ 
