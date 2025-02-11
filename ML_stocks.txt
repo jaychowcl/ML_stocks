@@ -3,18 +3,23 @@ ML_stocks
 A data analysis pipeline for stock analysis.
 
 Overview:
-1. import.py
+1. FinanceData.py
+Class definition for FinaceData object
 
-	A data fetching and data preprocessing script for:
-	a. Stock price data from:
-		ai. Yahoo finance
+Interface for:
+	a. Data fetching
+		i. Market data from yfinance
+	
+	b. Generating statistics
+		i. SMA
+		ii. EMA
+		iii. MACD
+		iv. ADX
+		v. RSI
+	
+	c. Plot charts
+		i. price + metric vs date
 
 
-2. metrics.py
 
-	A script for generating relevent metrics for a given stock including:
-	a. MACD
-	b. SMA
-	c. EMA
-	d. ADX
- 
+

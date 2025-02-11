@@ -40,7 +40,8 @@ class FinanceData:
                         metrics = ["sma", "ema", "macd", "adx", "rsi"],
                         metricTimePeriod = "50d",
                         macdParams = [12, 26, 9], # fast, slow, signal
-                        rsiParams = 14 #how long RSI period is
+                        rsiParams = 14, #how long RSI period is
+                        adxParams = 14 #how long ADX period is
                         ): #generate statistics and metrics to append to ticker dataframes
         self.metricTimePeriod = metricTimePeriod
         numeric_period = int(str(metricTimePeriod).replace("d","")) #TODO: need to make it so d can be any interval
@@ -69,7 +70,7 @@ class FinanceData:
                 gains = delta.clip(lower = 0)
                 losses = -1 * delta.clip(upper = 0)
 
-                #calculate averages. use ewm instead of wilder smoothing to achieve basically the same result
+                #calculate averages.
                 avgGain = gains.ewm(alpha=1/rsiParams, adjust = False).mean()
                 avgLoss = losses.ewm(alpha=1/rsiParams, adjust = False).mean()
 
@@ -77,9 +78,51 @@ class FinanceData:
                 rsi = 100 - (100 / (1+rs))
 
                 tickerdf_i["rsi"] = rsi
-                print(rsi)
+                # print(rsi)
 
-            
+            if "adx" in metrics: #average directional index: measures strength of trend
+                #collect highs, lows, closes, and prev values
+                high = tickerdf_i["High"]
+                low = tickerdf_i["Low"]
+                close = tickerdf_i["Close"]
+                highPrev = high.shift(1)
+                lowPrev = low.shift(1)
+                closePrev = close.shift(1)
+
+                #calculate true range
+                tr1 = high - low
+                tr2 = (high - closePrev).abs()
+                tr3 = (low - closePrev).abs()
+                tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+                #calculate +/- directional movements
+                dmPlus = high - highPrev
+                dmMinus = lowPrev - low
+                #remove -ve values
+                dmPlus[dmPlus < 0 ] = 0
+                dmMinus[dmMinus < 0 ] = 0
+
+                #average true rate
+                avgTR = tr.ewm(alpha = 1/adxParams, adjust = False).mean()
+                #smoothed +/- directional movements
+                dmPlusEWM = dmPlus.ewm(alpha = 1/adxParams, adjust = False).mean()
+                dmMinusEWM = dmMinus.ewm(alpha = 1/adxParams, adjust = False).mean()
+
+                #calculate +/- directional index
+                diPlus = 100 * (dmPlusEWM / avgTR)
+                diMinus = 100 * (dmMinusEWM / avgTR)
+
+                #calculate directional index DX
+                dx = 100 * ((diPlus - diMinus).abs() / (diPlus + diMinus).abs())
+
+                #calculate average directional index ADX
+                adx = dx.ewm(alpha=1/adxParams, adjust=False).mean()
+                
+                #place adx and +/- DI into tickerDf
+                tickerdf_i["adx"] = adx
+                tickerdf_i["+di"] = diPlus
+                tickerdf_i["-di"] = diMinus
+
 
     def generatePlots(self,
                       cols = ["sma"],
@@ -93,7 +136,7 @@ class FinanceData:
         plotvars = {}
         for col in cols:
             plotvars["Close"] = plotdf["Close"] 
-            if col in ["sma", "ema"]:
+            if col in ["sma", "ema"]: #include period for sma and ema
                 plotvars[f"{col}{self.metricTimePeriod}"] = plotdf[f"{col}{self.metricTimePeriod}"]
             else:
                 plotvars[f"{col}"] = plotdf[f"{col}"]
@@ -124,8 +167,9 @@ metrics = ["sma", "ema", "macd", "adx", "rsi"]
 metricTimePeriod = "50d"
 macdParams = [12, 26, 9] # 12 fast, 26 slow, 9 signal
 rsiParams = 14
+adxParams =14
 #data.generatePlots
-plotCols = ["sma", "ema", "macd", "macd_signal"]
+plotCols = ["sma", "ema", "macd", "macd_signal", "rsi", "adx"]
 plotTicker = None
 
 ####### PIPELINE #######
@@ -146,7 +190,8 @@ data.downloadData()
 data.generateMetrics(metrics = metrics,
                      metricTimePeriod = metricTimePeriod,
                      macdParams= macdParams,
-                     rsiParams=rsiParams)
+                     rsiParams=rsiParams,
+                     adxParams=adxParams)
 
 #generate plots
 data.generatePlots(cols = plotCols,
