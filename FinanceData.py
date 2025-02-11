@@ -245,9 +245,11 @@ class FinanceData:
             y_predict = lr.predict(X_test_Scale)
 
             if y_test is None: # return only predictions if without y test
+                self.predictions = {"y_predict": y_predict, "scores": "NA"}
                 return {"y_predict": y_predict, "scores": "NA"}
             else: # return predictions and accuracy score with y test
                 y_predict_score = lr.score(X_test_Scale, y_test)
+                self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
                 return {"y_predict": y_predict, "scores": y_predict_score}
             
     
@@ -340,13 +342,14 @@ data.kFoldSplitTimeSeries(kSplits = kSplits,
                           yTarget= yTarget)
 
 #run a strategy and predict/evaluate target
-
+k_folds = 3
 data.runStrategy(strategy = strategy,
-                 X_train = data.kFoldX.iloc[data.kFoldIdx[0]["trainIdx"]],
-                 y_train = data.kFoldy.iloc[data.kFoldIdx[0]["trainIdx"]],
-                 X_test = data.kFoldX.iloc[data.kFoldIdx[0]["testIdx"]],
-                 y_test = data.kFoldy.iloc[data.kFoldIdx[0]["testIdx"]]
+                 X_train = data.kFoldX.iloc[data.kFoldIdx[k_folds]["trainIdx"]],
+                 y_train = data.kFoldy.iloc[data.kFoldIdx[k_folds]["trainIdx"]],
+                 X_test = data.kFoldX.iloc[data.kFoldIdx[k_folds]["testIdx"]],
+                 y_test = data.kFoldy.iloc[data.kFoldIdx[k_folds]["testIdx"]]
                  )
 
+#kfold cross validation
 
 ###################################
