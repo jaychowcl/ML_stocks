@@ -9,6 +9,7 @@ from IPython.display import display
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 
 ####### CLASS DEFINITIONS #######
 
@@ -174,7 +175,7 @@ class FinanceData:
                         maxTrainSize = None,
                         testSize = None,
                         gapSize = 0,
-                        predictionPeriod = 1, # how many invervals in future that classifier will predict direction on
+                        predictionPeriod = 1, # how many invervals in future the mode will predict y on
                         tickerKFold = None,
                         yTarget = "targetDirection"
                         ): #split data for kfold cross validation using TimeSeriesSplit
@@ -235,7 +236,7 @@ class FinanceData:
         X_test_Scale = scaler.transform(X_test)
 
         if "logistic" in strategy: # logistic regression with L2 ridge regression regularization and liblinear solver
-            print("Logistic regression:")
+            # print("Logistic regression:")
             lr = LogisticRegression(fit_intercept= True, 
                                     solver = "liblinear", 
                                     penalty = "l2") # first init logistic regression model
@@ -246,12 +247,24 @@ class FinanceData:
 
             if y_test is None: # return only predictions if without y test
                 self.predictions = {"y_predict": y_predict, "scores": "NA"}
-                return {"y_predict": y_predict, "scores": "NA"}
             else: # return predictions and accuracy score with y test
                 y_predict_score = lr.score(X_test_Scale, y_test)
                 self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
-                return {"y_predict": y_predict, "scores": y_predict_score}
             
+        elif "svm" in strategy: #support vector machine with radial basis function kernel 
+            svm = SVC(kernel = "rbf")
+            svm.fit(X_train_Scale, y_train) # train model
+
+            #use svm model to predict test cases
+            y_predict = svm.predict(X_test_Scale)
+
+            if y_test is None: # return only predictions if without y test
+                self.predictions = {"y_predict": y_predict, "scores": "NA"}
+            else: # return predictions and accuracy score with y test
+                y_predict_score = svm.score(X_test_Scale, y_test)
+                self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
+
+
     
     def kFoldValidation(self,
                         ):
@@ -300,7 +313,7 @@ predictionPeriod = 1
 tickerKFold = None
 yTarget = "targetDirection"
 #data.runStrategy
-strategy = ["logistic"]
+strategy = ["svm"] # "logistic"  "svm"
 X_train = None
 y_train = None
 X_test = None
