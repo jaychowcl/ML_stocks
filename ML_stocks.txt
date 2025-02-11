@@ -19,11 +19,11 @@ Interface for:
 	
 	c. Plot charts
 		i. price + metric vs date
-		ii. pairplots
-		iii. correlation matrices
+		ii. pairplots + correlation matrices
 
 	d. Data preparation
-		i. Splitting dataset for k fold cross validation
+		i. Splitting dataset for k fold cross validation: via TimeSeriesSplit
+		ii. Scaling predictors to mean 0 and var 1 with StandardScaler
 	
 	e. Strategy building
 		ii. Binary classification of next period stock direction
