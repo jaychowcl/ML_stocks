@@ -19,6 +19,22 @@ Interface for:
 	
 	c. Plot charts
 		i. price + metric vs date
+		ii. pairplots
+		iii. correlation matrices
+
+	d. Data preparation
+		i. Splitting dataset for k fold cross validation
+	
+	e. Strategy building
+		ii. Binary classification of next period stock direction
+			1. Logistic regression
+			2. Support vector machines
+			3. Decision trees
+			4. Random forest
+
+	e. Backtesting
+
+
 
 
 

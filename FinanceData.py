@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from IPython.display import display
 
 
@@ -126,7 +127,8 @@ class FinanceData:
 
     def generatePlots(self,
                       cols = ["sma"],
-                      plotTicker = None): #generate plots with date on y axis, and chosen cols on x axis
+                      plotTicker = None,
+                      pairplot = 1): #generate plots with date on y axis, and chosen cols on x axis
         
         if plotTicker == None:#for default take first ticker in tickers list
             plotTicker = self.tickers[0]
@@ -144,6 +146,20 @@ class FinanceData:
                                  index = plotdf.index)
         plotvars.plot()
         plt.show()
+
+        if pairplot == 1:
+            sns.pairplot(data = self.tickerDf[plotTicker]) # plot pairplot
+            #plot correlation matrix
+            corrmatrix = self.tickerDf[plotTicker].corr()
+            sns.heatmap(corrmatrix, annot = True)
+        
+    
+    def kFoldTimeSeries(k = 5,
+                        maxTrainSize = None,
+                        testSize = None,
+                        gapSize = 0):
+        
+
         
 
 
@@ -168,9 +184,15 @@ metricTimePeriod = "50d"
 macdParams = [12, 26, 9] # 12 fast, 26 slow, 9 signal
 rsiParams = 14
 adxParams =14
+pairplot = 1
 #data.generatePlots
 plotCols = ["sma", "ema", "macd", "macd_signal", "rsi", "adx"]
 plotTicker = None
+#data.kFoldTimeSeries
+k = 5
+maxTrainSize = None
+testSize = None
+gapSize = 0
 
 ####### PIPELINE #######
 
@@ -195,6 +217,13 @@ data.generateMetrics(metrics = metrics,
 
 #generate plots
 data.generatePlots(cols = plotCols,
-                   plotTicker = plotTicker)
+                   plotTicker = plotTicker,
+                   pairplot = pairplot)
+
+#split data via TimeSeriesSplit
+data.kFoldTimeSeries(k = k,
+                     maxTrainSize = maxTrainSize,
+                     testSize= testSize,
+                     gapSize=gapSize)
 
 ###################################
