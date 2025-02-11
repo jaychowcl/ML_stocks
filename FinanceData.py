@@ -10,6 +10,8 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 ####### CLASS DEFINITIONS #######
 
@@ -264,7 +266,17 @@ class FinanceData:
                 y_predict_score = svm.score(X_test_Scale, y_test)
                 self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
 
+        elif "dt" in strategy: #decision trees
+            dt = DecisionTreeClassifier(criterion= "entropy")
+            dt.fit(X_train, y_train)
 
+            y_predict = dt.predict(X_test) # no need to scale since dt uses feature threshods
+
+            if y_test is None: # return only predictions if without y test
+                self.predictions = {"y_predict": y_predict, "scores": "NA"}
+            else: # return predictions and accuracy score with y test
+                y_predict_score = dt.score(X_test, y_test)
+                self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
     
     def kFoldValidation(self,
                         ):
@@ -313,7 +325,7 @@ predictionPeriod = 1
 tickerKFold = None
 yTarget = "targetDirection"
 #data.runStrategy
-strategy = ["svm"] # "logistic"  "svm"
+strategy = ["dt"] # "logistic"  "svm"  "dt"
 X_train = None
 y_train = None
 X_test = None
