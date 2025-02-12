@@ -12,6 +12,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import f1_score, confusion_matrix
+
 
 ####### CLASS DEFINITIONS #######
 
@@ -243,40 +245,79 @@ class FinanceData:
                                     solver = "liblinear", 
                                     penalty = "l2") # first init logistic regression model
             lr.fit(X_train_Scale, y_train) # train model
+            #store model
+            self.model = lr
 
             #use lr model to predict test cases
             y_predict = lr.predict(X_test_Scale)
 
             if y_test is None: # return only predictions if without y test
-                self.predictions = {"y_predict": y_predict, "scores": "NA"}
+                self.predictions = {"y_predict": y_predict, "accuracy": "NA"}
             else: # return predictions and accuracy score with y test
                 y_predict_score = lr.score(X_test_Scale, y_test)
-                self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
+                self.predictions = {"y_predict": y_predict, "accuracy": y_predict_score}
             
         elif "svm" in strategy: #support vector machine with radial basis function kernel 
             svm = SVC(kernel = "rbf")
             svm.fit(X_train_Scale, y_train) # train model
 
+            self.model = svm
+
             #use svm model to predict test cases
             y_predict = svm.predict(X_test_Scale)
 
             if y_test is None: # return only predictions if without y test
-                self.predictions = {"y_predict": y_predict, "scores": "NA"}
+                self.predictions = {"y_predict": y_predict, "accuracy": "NA"}
             else: # return predictions and accuracy score with y test
                 y_predict_score = svm.score(X_test_Scale, y_test)
-                self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
+                self.predictions = {"y_predict": y_predict, "accuracy": y_predict_score}
 
         elif "dt" in strategy: #decision trees
             dt = DecisionTreeClassifier(criterion= "entropy")
             dt.fit(X_train, y_train)
 
+            self.model = dt
+
             y_predict = dt.predict(X_test) # no need to scale since dt uses feature threshods
 
             if y_test is None: # return only predictions if without y test
-                self.predictions = {"y_predict": y_predict, "scores": "NA"}
+                self.predictions = {"y_predict": y_predict, "accuracy": "NA"}
             else: # return predictions and accuracy score with y test
                 y_predict_score = dt.score(X_test, y_test)
-                self.predictions = {"y_predict": y_predict, "scores": y_predict_score}
+                self.predictions = {"y_predict": y_predict, "accuracy": y_predict_score}
+
+        elif "rf" in strategy: #random forest
+            rf = RandomForestClassifier(n_estimators=100, criterion= "entropy")
+            rf.fit(X_train, y_train)
+
+            self.model = rf
+
+            y_predict = rf.predict(X_test)
+
+            if y_test is None: # return only predictions if without y test
+                self.predictions = {"y_predict": y_predict, "accuracy": "NA"}
+            else: # return predictions and accuracy score with y test
+                y_predict_score = rf.score(X_test, y_test)
+                self.predictions = {"y_predict": y_predict, "accuracy": y_predict_score}
+        
+        #calculate f1 scores 
+        self.predictions["f1"] = f1_score(y_true= y_test,
+                                          y_pred= self.predictions["y_predict"])
+        # and confusion matrix
+        self.predictions["cm"] = confusion_matrix(y_true= y_test,
+                                                  y_pred= self.predictions["y_predict"])
+        # and normalized confusion matrix
+        self.predictions["cmNorm"] = self.predictions["cm"] / self.predictions["cm"].sum(axis=1)[:, np.newaxis]
+        
+        #plot and report
+        print(f"Accuracy: {self.predictions["accuracy"]}")
+        print(f"F1 Score: {self.predictions["f1"]}")
+        sns.heatmap(self.predictions["cmNorm"], xticklabels= [0 , 1], yticklabels= [0,1], annot = True, vmin= 0, vmax=1)
+        plt.show()
+        sns.heatmap(self.predictions["cm"], xticklabels= [0 , 1], yticklabels= [0,1], annot = True, vmin= 0, vmax=1)
+        plt.show()
+        
+
     
     def kFoldValidation(self,
                         ):
@@ -325,7 +366,7 @@ predictionPeriod = 1
 tickerKFold = None
 yTarget = "targetDirection"
 #data.runStrategy
-strategy = ["dt"] # "logistic"  "svm"  "dt"
+strategy = ["rf"] # "logistic"  "svm"  "dt"  "rf"
 X_train = None
 y_train = None
 X_test = None
@@ -376,5 +417,7 @@ data.runStrategy(strategy = strategy,
                  )
 
 #kfold cross validation
+
+
 
 ###################################
