@@ -180,11 +180,10 @@ class FinanceData:
                         testSize = None,
                         gapSize = 0,
                         predictionPeriod = 1, # how many invervals in future the mode will predict y on
-                        tickerKFold = None,
-                        yTarget = "targetDirection"
+                        tickerKFold = None
                         ): #split data for kfold cross validation using TimeSeriesSplit
         
-        if tickerKFold == None:
+        if tickerKFold is None:
             tickerKFold = self.tickers[0]
 
         #get target values according to predictionPeriod
@@ -193,15 +192,14 @@ class FinanceData:
         tickerdf_i["targetDirection"] = [1 if x >=0 else -1 for x in tickerdf_i["target"]]
 
         #make targetDirection the target if needed for binary classifiers
-        if yTarget == "targetDirection":
-            tickerdf_i["target"] = tickerdf_i["targetDirection"]
+        tickerdf_i["target"] = tickerdf_i["targetDirection"]
 
         #remove first row to remove NaN target since will always be in future
         tickerdf_i.drop(tickerdf_i.index[:1], inplace = True)
 
 
         y = tickerdf_i["target"] # target is close price after specific predictionPeriod
-        X = tickerdf_i.drop(columns=["Close", "High", "Low", "Open", "target", "targetDirection"]) # predicotrs are everything except these cols
+        X = tickerdf_i.drop(columns=["Close", "High", "Low", "Open", "target", "targetDirection", "delta", "deltaPerc"]) # predicotrs are everything except these cols
 
         tss = TimeSeriesSplit(n_splits = kSplits, max_train_size=maxTrainSize, test_size=testSize, gap=gapSize)#init tss from scikit learn
 
@@ -213,12 +211,14 @@ class FinanceData:
 
         self.kFoldX = X
         self.kFoldy = y
+        self.kFoldDf = tickerdf_i[["Close", "High", "Low", "Open", "target", "targetDirection", "delta", "deltaPerc"]]
         
         # print(self.kFoldIdx)
         # for i, (x, y) in self.kFoldIdx:
         #     print(i)
         #     print(x)
         #     print(y)
+
 
     def runStrategy(self, 
                     strategy = ["logistic"],
@@ -234,6 +234,9 @@ class FinanceData:
         #scale data to mean 0 and var 1
         scaler = StandardScaler()
         scaler.fit(X_train) #train scaler with training predictors
+
+        #store scaler
+        self.scaler = scaler
 
         #scale data for relevant methods
         X_train_Scale = scaler.transform(X_train)
@@ -310,18 +313,118 @@ class FinanceData:
         self.predictions["cmNorm"] = self.predictions["cm"] / self.predictions["cm"].sum(axis=1)[:, np.newaxis]
         
         #plot and report
-        print(f"Accuracy: {self.predictions["accuracy"]}")
-        print(f"F1 Score: {self.predictions["f1"]}")
-        sns.heatmap(self.predictions["cmNorm"], xticklabels= [0 , 1], yticklabels= [0,1], annot = True, vmin= 0, vmax=1)
-        plt.show()
-        sns.heatmap(self.predictions["cm"], xticklabels= [0 , 1], yticklabels= [0,1], annot = True, vmin= 0, vmax=1)
-        plt.show()
+        if y_test is not None:
+            print(f"Accuracy: {self.predictions["accuracy"]}")
+            print(f"F1 Score: {self.predictions["f1"]}")
+            sns.heatmap(self.predictions["cmNorm"], xticklabels= [0 , 1], yticklabels= [0,1], annot = True, vmin= 0, vmax=1)
+            plt.show()
+            sns.heatmap(self.predictions["cm"], xticklabels= [0 , 1], yticklabels= [0,1], annot = True, vmin= 0, vmax=1)
+            plt.show()
         
 
-    
     def kFoldValidation(self,
                         ):
         pass
+
+
+    def backtest(self,
+                 model = "svm", # "classif"  "regres"
+                 kFoldDf = None,
+                 X_test = None,
+                 seedMoney = 1000,
+                 scaler = 0
+                 ): # use a strategy to buy and sell the stock. chart the gains/losses against the testing set
+        
+        if kFoldDf is None or X_test is None:
+            raise ValueError("Please input y_train, y_test and X_test datasets")
+
+        if model is not None: #lets see how much money we lose if we follow the classifiers!
+            backtestX = X_test
+            backtestX_test = backtestX
+
+            cash = [seedMoney]
+            stock = [0]
+            stockValue = [0]
+
+            #apply scaler to test data
+            if scaler == 1:
+                backtestX_test = self.scaler.transform(backtestX)
+                print("SCALINGSCALINGSCALING")
+                print(backtestX_test)
+                self.backtestX_scale = backtestX_test
+            
+            print(backtestX)
+
+            # Apply model to each row of X_test to obtain direction in prediction col
+            backtestX["prediction"] = self.model.predict(backtestX_test)
+            self.backtestX = backtestX
+            
+            # buy / sell according to predicted direction
+            stock_i = 0
+            cash_i = seedMoney
+            stockValue_i = 0
+            for i in range(0, backtestX.shape[0]):
+                if backtestX["prediction"][i] == 1:
+                    stock_i = stock_i + (cash[i] / kFoldDf["Close"][i])
+                    cash_i = 0
+
+                    stockValue_i = (stock_i * kFoldDf["Close"][i])
+
+                    stock.append(stock_i)
+                    cash.append(cash_i)
+                    stockValue.append(stockValue_i)
+
+                if backtestX["prediction"][i] == -1:
+                    cash_i = cash_i + (stock_i * kFoldDf["Close"][i])
+                    stock_i = 0
+
+                    stockValue_i = (stock_i * kFoldDf["Close"][i])
+
+                    stock.append(stock_i)
+                    cash.append(cash_i)
+                    stockValue.append(stockValue_i)
+
+            holdings = np.array(cash) + np.array(stockValue) # calculate total holdings, cash + stock value
+            X_testIndex = X_test.index.to_numpy() # get date index from X test
+
+            holdings = pd.DataFrame({"date": pd.to_datetime(X_testIndex), 
+                                     "total_holdings": holdings[1:]}) # add dates to holdings. remove first holding since init from seedMoney
+            holdings.set_index("date", inplace=True)
+
+            self.backtestHoldings = holdings
+
+            #plot holdings vs time
+            # plt.plot(holdings.index, holdings["total_holdings"])
+            # plt.show()
+
+            fig, ax1 = plt.subplots(figsize=(12, 6))
+
+            # Plot total holdings
+            ax1.plot(holdings.index, holdings["total_holdings"], color='blue', label="Total Holdings")
+            ax1.set_xlabel("Date")
+            ax1.set_ylabel("Total Holdings ($)")
+            ax1.legend(loc="upper left")
+
+            # Create second y-axis for stock price
+            ax2 = ax1.twinx()
+            ax2.plot(holdings.index, kFoldDf["Close"].loc[holdings.index], color='red', linestyle='dashed', label="Stock Price")
+            ax2.set_ylabel("Stock Price ($)")
+            ax2.legend(loc="upper right")
+
+            plt.title(f"Backtest Performance for {tickerKFold}")
+            plt.show()
+
+            #get stats
+            #avg returns over test period]
+
+            model_returns = 100 * (holdings.iloc[len(holdings) - 1] - holdings.iloc[0]) / holdings.iloc[0]
+            stock_returns = 100 * (kFoldDf["Close"].iloc[len(kFoldDf) - 1] - kFoldDf["Close"].iloc[0]) / kFoldDf["Close"].iloc[0]
+            print(f"Model avg returns: {model_returns}%")
+            print(f"Stock buy&hold returns: {stock_returns}%")
+
+            #TODO: implement more metrics eg. Sharpe ratio, VAR, ES, alpha, 
+
+
 
 
 
@@ -345,7 +448,7 @@ class FinanceData:
 ####### SETTINGS #######
 #data.downloadData
 stock_tickers = ["SPY", "GOOG", "AAPL", "MSFT", "NVDA"]
-timePeriod = "1y"
+timePeriod = "3y"
 timeInterval = "1d"
 #data.generateMetrics
 metrics = ["sma", "ema", "macd", "adx", "rsi"]
@@ -363,14 +466,17 @@ maxTrainSize = None
 testSize = None
 gapSize = 0
 predictionPeriod = 1
-tickerKFold = None
-yTarget = "targetDirection"
+tickerKFold = "GOOG"  #SELECT TICKER FOR ANALYSIS
 #data.runStrategy
-strategy = ["rf"] # "logistic"  "svm"  "dt"  "rf"
+strategy = ["logistic"] # "logistic"  "svm"  "dt"  "rf"
 X_train = None
 y_train = None
 X_test = None
 y_test = None
+
+#data.backtest
+seedMoneyy = 1000
+scaler = 1 # SCALER FOR LOGISTIC AND SVM
 
 ####### PIPELINE #######
 
@@ -404,8 +510,7 @@ data.kFoldSplitTimeSeries(kSplits = kSplits,
                           testSize= testSize,
                           gapSize=gapSize,
                           predictionPeriod= predictionPeriod,
-                          tickerKFold = None,
-                          yTarget= yTarget)
+                          tickerKFold = tickerKFold)
 
 #run a strategy and predict/evaluate target
 k_folds = 3
@@ -418,6 +523,11 @@ data.runStrategy(strategy = strategy,
 
 #kfold cross validation
 
-
+#backtest strat
+data.backtest(model = strategy,
+              kFoldDf= data.kFoldDf.iloc[data.kFoldIdx[k_folds]["testIdx"]],
+              X_test= data.kFoldX.iloc[data.kFoldIdx[k_folds]["testIdx"]],
+              seedMoney= seedMoneyy,
+              scaler = scaler)
 
 ###################################

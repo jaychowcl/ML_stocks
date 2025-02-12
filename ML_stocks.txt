@@ -4,7 +4,7 @@ A data analysis pipeline for stock analysis.
 
 Overview:
 1. FinanceData.py
-Class definition for FinaceData object
+Class definition for FinanceData object
 
 Interface for:
 	a. Data fetching
@@ -23,17 +23,19 @@ Interface for:
 
 	d. Data preparation
 		i. Splitting dataset for k fold cross validation: via TimeSeriesSplit
-		ii. Scaling predictors to mean 0 and var 1 with StandardScaler
+		ii. Scaling predictors to mean 0 and var 1 with StandardScaler for relevant methods
 	
 	e. Strategy building
-		ii. Binary classification of next period stock direction
+		i. Binary classification of next period stock direction
 			1. Logistic regression
 			2. Support vector machines
 			3. Decision trees
 			4. Random forest
+			
 
 	e. Backtesting
-
+		i. Simple directional buy:
+			use classifier output to place buy and sell orders. 
 
 
 
