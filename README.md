@@ -4,14 +4,9 @@
 
 Introducing the FinanceData object!
 
-1. Collects stock market data
-2. Computes technical indicators
-3. Applies machine learning models for price movement prediction and
-4. Evaluates trading strategies through backtesting.
-
 ## Description
 
-This project is a financial data analysis and machine learning-based trading strategy framework.
+This project is a financial data analysis and machine learning-based trading strategy framework. It collects stock market data, calculates metrics and techinical indicators, applies machine learning techniques for price movement prediction and evaluates a given strategy via backtesting.
 
 ### This is _**NOT**_ a serious trading algo. 
 ### Use at your own risk, for it is only meant to be a playground for me to analyse some financial data! 
