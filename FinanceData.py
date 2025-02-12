@@ -426,24 +426,7 @@ class FinanceData:
 
 
 
-
-
-
-
-        
-
-        
-
-        
-
-
-
 ###################################
-
-
-
-
-
 
 ####### SETTINGS #######
 #data.downloadData
